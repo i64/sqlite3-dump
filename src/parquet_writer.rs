@@ -10,7 +10,6 @@ use parquet::basic::{Compression, ZstdLevel};
 use parquet::file::properties::WriterProperties;
 use std::fs::File;
 
-
 use std::path::Path;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::Arc;
@@ -29,7 +28,7 @@ pub struct ParquetContext {
     rowid_builder: Int64Builder,
     column_builders: Vec<ColumnBuilder>,
     columns: Vec<ArrayRef>,
-    batch_size: usize
+    batch_size: usize,
 }
 
 impl ColumnBuilder {
@@ -167,7 +166,7 @@ pub fn initialize_context<P: AsRef<Path>>(
         rowid_builder,
         column_builders,
         columns,
-        batch_size
+        batch_size,
     })
 }
 
@@ -225,10 +224,7 @@ fn process_row_values(
     }
 }
 
-fn flush_rows(
-    context: &mut ParquetContext,
-    last: bool,
-) -> Result<(), SQLiteError> {
+fn flush_rows(context: &mut ParquetContext, last: bool) -> Result<(), SQLiteError> {
     context.columns.clear();
 
     let rowid_array = Arc::new(context.rowid_builder.finish());
@@ -238,13 +234,16 @@ fn flush_rows(
     context.columns.push(rowid_array as ArrayRef);
 
     for builder in context.column_builders.iter_mut() {
-        context.columns.push(builder.finish_reset(context.batch_size));
+        context
+            .columns
+            .push(builder.finish_reset(context.batch_size));
     }
 
-    let record_batch = RecordBatch::try_new(context.schema.clone(),context. columns.clone())
+    let record_batch = RecordBatch::try_new(context.schema.clone(), context.columns.clone())
         .map_err(|e| SQLiteError::Other(format!("Failed to create record batch: {}", e)))?;
 
-    context.sender
+    context
+        .sender
         .send(record_batch)
         .map_err(|_| SQLiteError::Other("Writer thread died".to_string()))?;
 
@@ -272,14 +271,12 @@ pub fn export_table_to_parquet<P: AsRef<Path>>(
 
     reader.stream_table_rows_sequential(table_name, |cell, column_values| {
         if context.is_none() {
-            context =
-                Some(initialize_context(
-                                    cell,
-                                    &output_path,
-                                    batch_size,
-                                    column_names.as_deref(),
-                                )?)
-                ;
+            context = Some(initialize_context(
+                cell,
+                &output_path,
+                batch_size,
+                column_names.as_deref(),
+            )?);
         }
         let context = context.as_mut().unwrap();
         context.rowid_builder.append_value(cell.rowid as i64);
@@ -301,30 +298,25 @@ pub fn export_table_to_parquet<P: AsRef<Path>>(
         total_rows += 1;
 
         if rows_buffered >= batch_size {
-            flush_rows(
-                context,
-                false
-            )?;
+            flush_rows(context, false)?;
             rows_buffered = 0;
         }
 
         Ok(())
     })?;
-    
+
     let mut context = context.unwrap();
-    
+
     if rows_buffered > 0 {
-        flush_rows(
-            &mut context,
-            true
-        )?;
+        flush_rows(&mut context, true)?;
     }
 
     drop(context.sender);
 
-        context.writer_handle
-            .join()
-            .map_err(|_| SQLiteError::Other("Writer thread panicked".to_string()))??;
+    context
+        .writer_handle
+        .join()
+        .map_err(|_| SQLiteError::Other("Writer thread panicked".to_string()))??;
 
     Ok(total_rows)
 }

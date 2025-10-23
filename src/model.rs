@@ -86,7 +86,6 @@ pub(crate) struct InteriorPageHeader {
     pub(crate) rightmost_pointer: u32,
 }
 
-
 /// Interior table B-tree page
 pub(crate) struct InteriorTablePage {
     pub(crate) header: InteriorPageHeader,
@@ -128,7 +127,6 @@ impl LeafPageHeader {
         (local_size, Some(overflow_size))
     }
 }
-
 
 pub(crate) struct LeafTablePage<'a> {
     // pub(crate) header: LeafPageHeader,

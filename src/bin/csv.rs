@@ -78,7 +78,11 @@ fn create_output_writer(output_path: Option<&PathBuf>) -> BufWriter<Box<dyn Writ
     }
 }
 
-fn stream_table_to_csv(reader: &Reader<Mmap>, table_name: &str, output: &mut BufWriter<Box<dyn Write>>) {
+fn stream_table_to_csv(
+    reader: &Reader<Mmap>,
+    table_name: &str,
+    output: &mut BufWriter<Box<dyn Write>>,
+) {
     reader
         .stream_table_rows_sequential(table_name, |row, column_values| {
             write_row_to_csv(reader, row, column_values, output).map_err(SQLiteError::IOError)
@@ -102,13 +106,12 @@ fn write_row_to_csv(
         column_values
     };
 
-    let overflow_data = if row.overflow_page_no.is_some()
-        && values_to_output.iter().any(|v| v.is_none())
-    {
-        reader.reconstruct_full_payload(row).ok()
-    } else {
-        None
-    };
+    let overflow_data =
+        if row.overflow_page_no.is_some() && values_to_output.iter().any(|v| v.is_none()) {
+            reader.reconstruct_full_payload(row).ok()
+        } else {
+            None
+        };
 
     for value in values_to_output.iter() {
         output.write_all(b",")?;
@@ -158,9 +161,14 @@ fn write_value_to_csv(
     Ok(())
 }
 
-fn write_csv_text(text: &str, output: &mut BufWriter<Box<dyn Write>>) -> Result<(), std::io::Error> {
+fn write_csv_text(
+    text: &str,
+    output: &mut BufWriter<Box<dyn Write>>,
+) -> Result<(), std::io::Error> {
     let bytes = text.as_bytes();
-    let needs_quoting = bytes.iter().any(|&b| matches!(b, b',' | b'"' | b'\n' | b'\r'));
+    let needs_quoting = bytes
+        .iter()
+        .any(|&b| matches!(b, b',' | b'"' | b'\n' | b'\r'));
 
     if needs_quoting {
         output.write_all(b"\"")?;

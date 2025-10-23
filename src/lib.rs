@@ -23,14 +23,14 @@ pub type HashMap<K, V> = std::collections::HashMap<K, V, ahash::RandomState>;
 const SQLITE_MASTER_TABLE_SIZE: usize = 5;
 
 #[repr(usize)]
-enum SqliteMasterTable{
+enum SqliteMasterTable {
     Type = 0,
     Name = 1,
     // TblName = 2,
     RootPage = 3,
     Sql = 4,
 }
-           
+
 #[inline(always)]
 fn get_table_cell_values<'a>(
     cell: &'a model::LeafTableCell<'a>,
@@ -170,7 +170,7 @@ impl<S: AsRef<[u8]> + Sync> Reader<S> {
     }
 
     pub fn get_tables_map(&self) -> error::Result<&HashMap<String, Option<SqlSchema>>> {
-         self.tables.get_or_try_init(|| {
+        self.tables.get_or_try_init(|| {
             let root = self.get_page(0)?;
             let mut new_tables = HashMap::default();
 
@@ -201,10 +201,14 @@ impl<S: AsRef<[u8]> + Sync> Reader<S> {
         tables: &mut HashMap<String, Option<SqlSchema>>,
     ) {
         if column_values.len() == SQLITE_MASTER_TABLE_SIZE {
-            if let Some(model::Payload::Text(ref type_text)) = column_values[SqliteMasterTable::Type as usize] {
+            if let Some(model::Payload::Text(ref type_text)) =
+                column_values[SqliteMasterTable::Type as usize]
+            {
                 let type_str = type_text.decode(self.header.db_text_encoding);
                 if type_str == "table" {
-                    if let Some(model::Payload::Text(ref name_text)) = column_values[SqliteMasterTable::Name as usize] {
+                    if let Some(model::Payload::Text(ref name_text)) =
+                        column_values[SqliteMasterTable::Name as usize]
+                    {
                         let table_name =
                             name_text.decode(self.header.db_text_encoding).into_owned();
 
@@ -266,13 +270,19 @@ impl<S: AsRef<[u8]> + Sync> Reader<S> {
         table_name: &str,
     ) -> error::Result<Option<u32>> {
         if column_values.len() == SQLITE_MASTER_TABLE_SIZE {
-            if let Some(model::Payload::Text(ref type_text)) = column_values[SqliteMasterTable::Type as usize] {
+            if let Some(model::Payload::Text(ref type_text)) =
+                column_values[SqliteMasterTable::Type as usize]
+            {
                 let type_str = type_text.decode(self.header.db_text_encoding);
                 if type_str == "table" {
-                    if let Some(model::Payload::Text(ref name_text)) = column_values[SqliteMasterTable::Name as usize] {
+                    if let Some(model::Payload::Text(ref name_text)) =
+                        column_values[SqliteMasterTable::Name as usize]
+                    {
                         let name = name_text.decode(self.header.db_text_encoding);
                         if name == table_name {
-                            if let Some(ref pageno_payload) = column_values[SqliteMasterTable::RootPage as usize] {
+                            if let Some(ref pageno_payload) =
+                                column_values[SqliteMasterTable::RootPage as usize]
+                            {
                                 if let Some(pageno) = pageno_payload.as_u32() {
                                     return Ok(Some(pageno));
                                 }

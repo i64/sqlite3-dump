@@ -229,9 +229,7 @@ fn parse_single_column<'a, E: ParserError<&'a [u8]>>(
     }
 }
 
-fn interior_index_cell<'a, E: ParserError<&'a [u8]>>(
-    input: &mut &'a [u8],
-) -> Result<(), E> {
+fn interior_index_cell<'a, E: ParserError<&'a [u8]>>(input: &mut &'a [u8]) -> Result<(), E> {
     let _left_child_page_no = be_u32.parse_next(input)?;
     let payload_size = be_u64_varint.parse_next(input)?;
 
@@ -289,9 +287,7 @@ fn leaf_index_b_tree_page<'a, E: ParserError<&'a [u8]>>(
     }
 }
 
-fn leaf_index_cell<'a, E: ParserError<&'a [u8]>>(
-    input: &mut &'a [u8],
-) -> Result<(), E> {
+fn leaf_index_cell<'a, E: ParserError<&'a [u8]>>(input: &mut &'a [u8]) -> Result<(), E> {
     let payload_size = be_u64_varint.parse_next(input)?;
     take(payload_size as usize).parse_next(input)?;
     Ok(())
@@ -349,7 +345,7 @@ fn table_cell_payload_cached<'a, E: ParserError<&'a [u8]>>(
     let header_bytes = &input[0..header_size as usize - 1];
 
     let header_hash = ahash::RandomState::with_seeds(0, 0, 0, 0).hash_one(header_bytes);
-    
+
     let types = if let Some(cached) = cached_types.get(&header_hash) {
         *input = &input[header_size as usize - 1..];
         Arc::clone(cached)
@@ -362,7 +358,7 @@ fn table_cell_payload_cached<'a, E: ParserError<&'a [u8]>>(
         types_arc
     };
 
-    let total_payload_size =(payload_size as usize).saturating_sub(header_size as usize);
+    let total_payload_size = (payload_size as usize).saturating_sub(header_size as usize);
 
     let local_data_size = if let Some(max_local) = max_local {
         let max_payload_bytes = max_local.saturating_sub(header_size as usize);
@@ -450,8 +446,8 @@ pub(crate) fn overflow_page<'a, E: ParserError<&'a [u8]>>(
 pub(crate) enum CellType<'a, 'b> {
     LeafTable(LeafTableCell<'a>, &'b Vec<Option<Payload<'a>>>), // cell + column values reference
     // LeafIndex,
-    InteriorTable(u32),           // page number
-    InteriorTableRightmost(u32),  // rightmost pointer
+    InteriorTable(u32),          // page number
+    InteriorTableRightmost(u32), // rightmost pointer
 }
 
 pub(crate) fn stream_page_cells<'a, F>(
@@ -521,11 +517,9 @@ where
                     })?;
                 let cell_offset = ptr as usize - page_start_offset;
                 let mut cell_input = &page_start[cell_offset..];
-                leaf_index_cell::<ContextError>(&mut cell_input).map_err(
-                    |_: ContextError| {
-                        crate::error::SQLiteError::Other("Failed to parse index cell".into())
-                    },
-                )?;
+                leaf_index_cell::<ContextError>(&mut cell_input).map_err(|_: ContextError| {
+                    crate::error::SQLiteError::Other("Failed to parse index cell".into())
+                })?;
             }
         }
         PAGE_TYPE_INTERIOR_TABLE => {

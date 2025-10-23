@@ -28,22 +28,23 @@ struct Args {
 
 fn main() {
     let args: Args = argh::from_env();
-    
+
     let reader = open_database(&args.database);
-    
-    
+
     let db_name = get_db_name(&args.database);
-    
+
     if let Some(table_name) = &args.table {
-        let output_path = args.output.clone().unwrap_or(format!("{table_name}.parquet"));
-        print_header(&args,&output_path , &reader);
+        let output_path = args
+            .output
+            .clone()
+            .unwrap_or(format!("{table_name}.parquet"));
+        print_header(&args, &output_path, &reader);
         export_single_table(&reader, table_name, &output_path, args.batch_size);
     } else {
         let output_dir = prepare_output_dir(&args.output);
         export_all_tables(&reader, &output_dir, args.batch_size, db_name);
     }
 }
-
 
 fn prepare_output_dir(output_dir_opt: &Option<String>) -> String {
     let output_dir = output_dir_opt.clone().unwrap_or_else(|| ".".to_string());
@@ -123,12 +124,9 @@ fn export_single_table(
     let export_start = Instant::now();
 
     match export_table_to_parquet(reader, table_name, output_file, batch_size) {
-        Ok(row_count) => print_single_table_summary(
-            table_name,
-            row_count,
-            &export_start,
-            output_file,
-        ),
+        Ok(row_count) => {
+            print_single_table_summary(table_name, row_count, &export_start, output_file)
+        }
         Err(e) => {
             eprintln!();
             eprintln!("Error: Export failed for table '{}': {:?}", table_name, e);
@@ -247,7 +245,11 @@ fn export_table(
     result
 }
 
-fn print_export_summary(successful_exports: usize, total_rows: usize, total_duration: std::time::Duration) {
+fn print_export_summary(
+    successful_exports: usize,
+    total_rows: usize,
+    total_duration: std::time::Duration,
+) {
     println!();
     println!("Export Summary");
     println!("==========================");
