@@ -14,6 +14,27 @@ use std::path::Path;
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::sync::Arc;
 
+impl SerialType {
+    #[inline]
+    fn to_arrow(&self) -> (DataType, bool) {
+        match self {
+            SerialType::Null => (DataType::Binary, true),
+            SerialType::I8
+            | SerialType::I16
+            | SerialType::I24
+            | SerialType::I32
+            | SerialType::I48
+            | SerialType::I64
+            | SerialType::Const0
+            | SerialType::Const1 => (DataType::Int64, true),
+            SerialType::F64 => (DataType::Float64, true),
+            SerialType::Text(_) => (DataType::Utf8, true),
+            SerialType::Blob(_) => (DataType::Binary, true),
+            SerialType::Reserved => (DataType::Binary, true),
+        }
+    }
+}
+
 enum ColumnBuilder {
     Int64(Int64Builder),
     Float64(Float64Builder),
@@ -81,7 +102,7 @@ impl ColumnBuilder {
     }
 }
 
-pub(crate) fn build_arrow_schema_from_row(
+pub(crate) fn build_arrow_schema(
     column_types: &[SerialType],
     column_names: Option<&[String]>,
 ) -> Arc<Schema> {
@@ -99,7 +120,7 @@ pub(crate) fn build_arrow_schema_from_row(
     };
 
     for (idx, serial_type) in columns_to_process.iter().enumerate() {
-        let (data_type, nullable) = serial_type_to_arrow(serial_type);
+        let (data_type, nullable) = serial_type.to_arrow();
         let column_name = if let Some(names) = column_names {
             names
                 .get(idx)
@@ -115,39 +136,23 @@ pub(crate) fn build_arrow_schema_from_row(
     Arc::new(Schema::new(fields))
 }
 
-fn serial_type_to_arrow(serial_type: &SerialType) -> (DataType, bool) {
-    match serial_type {
-        SerialType::Null => (DataType::Binary, true),
-        SerialType::I8
-        | SerialType::I16
-        | SerialType::I24
-        | SerialType::I32
-        | SerialType::I48
-        | SerialType::I64
-        | SerialType::Const0
-        | SerialType::Const1 => (DataType::Int64, true),
-        SerialType::F64 => (DataType::Float64, true),
-        SerialType::Text(_) => (DataType::Utf8, true),
-        SerialType::Blob(_) => (DataType::Binary, true),
-        SerialType::Reserved => (DataType::Binary, true),
-    }
-}
 
-pub fn initialize_context<P: AsRef<Path>>(
+    
+pub fn context_init<P: AsRef<Path>>(
     cell: &LeafTableCell,
     output_path: P,
     batch_size: usize,
     column_names: Option<&[String]>,
 ) -> Result<ParquetContext, SQLiteError> {
     let column_types = cell.payload.column_types.clone();
-    let arrow_schema = build_arrow_schema_from_row(&column_types, column_names);
+    let arrow_schema = build_arrow_schema(&column_types, column_names);
 
     let (tx, rx) = std::sync::mpsc::sync_channel::<RecordBatch>(2);
 
     let output_path = output_path.as_ref().to_path_buf();
     let schema_clone = arrow_schema.clone();
     let writer_handle = std::thread::spawn(move || -> Result<(), SQLiteError> {
-        write_batches_to_parquet(rx, &output_path, schema_clone)
+        write_batches(rx, &output_path, schema_clone)
     });
 
     let rowid_builder = Int64Builder::with_capacity(batch_size);
@@ -170,7 +175,7 @@ pub fn initialize_context<P: AsRef<Path>>(
     })
 }
 
-fn process_row_values(
+fn process_row(
     column_values: &[Option<Payload>],
     column_builders: &mut [ColumnBuilder],
     text_encoding: TextEncoding,
@@ -250,7 +255,7 @@ fn flush_rows(context: &mut ParquetContext, last: bool) -> Result<(), SQLiteErro
     Ok(())
 }
 
-pub fn export_table_to_parquet<P: AsRef<Path>>(
+pub fn export_table<P: AsRef<Path>>(
     reader: &Reader<impl AsRef<[u8]> + Sync>,
     table_name: &str,
     output_path: P,
@@ -271,7 +276,7 @@ pub fn export_table_to_parquet<P: AsRef<Path>>(
 
     reader.stream_table_rows_sequential(table_name, |cell, column_values| {
         if context.is_none() {
-            context = Some(initialize_context(
+            context = Some(context_init(
                 cell,
                 &output_path,
                 batch_size,
@@ -287,7 +292,7 @@ pub fn export_table_to_parquet<P: AsRef<Path>>(
             None
         };
 
-        process_row_values(
+        process_row(
             column_values,
             context.column_builders.as_mut_slice(),
             text_encoding,
@@ -321,7 +326,7 @@ pub fn export_table_to_parquet<P: AsRef<Path>>(
     Ok(total_rows)
 }
 
-fn write_batches_to_parquet<P: AsRef<Path>>(
+fn write_batches<P: AsRef<Path>>(
     receiver: Receiver<RecordBatch>,
     output_path: P,
     schema: Arc<Schema>,

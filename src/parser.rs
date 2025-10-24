@@ -171,7 +171,7 @@ fn interior_index_b_tree_page<'a, E: ParserError<&'a [u8]>>(
 ) -> impl Parser<&'a [u8], (), E> {
     move |input: &mut &'a [u8]| {
         let page_start = *input;
-        literal(&[PAGE_TYPE_INTERIOR_INDEX][..]).parse_next(input)?;
+        literal(PAGE_TYPE_INTERIOR_INDEX).parse_next(input)?;
         let header = interior_page_header.parse_next(input)?;
 
         for _ in 0..header.no_cells {
@@ -198,7 +198,7 @@ fn column_types<'a, E: ParserError<&'a [u8]>>(input: &mut &'a [u8]) -> Result<Ve
 }
 
 #[inline(always)]
-fn parse_single_column<'a, E: ParserError<&'a [u8]>>(
+fn column<'a, E: ParserError<&'a [u8]>>(
     serial_type: &SerialType,
     input: &mut &'a [u8],
 ) -> Result<Option<Payload<'a>>, E> {
@@ -253,7 +253,7 @@ fn interior_table_b_tree_page<'a, E: ParserError<&'a [u8]>>(
 ) -> impl Parser<&'a [u8], InteriorTablePage, E> {
     move |input: &mut &'a [u8]| {
         let page_start = *input;
-        literal(&[PAGE_TYPE_INTERIOR_TABLE][..]).parse_next(input)?;
+        literal(PAGE_TYPE_INTERIOR_TABLE).parse_next(input)?;
         let header = interior_page_header.parse_next(input)?;
 
         let mut cells = Vec::with_capacity(header.no_cells as usize);
@@ -274,7 +274,7 @@ fn leaf_index_b_tree_page<'a, E: ParserError<&'a [u8]>>(
 ) -> impl Parser<&'a [u8], (), E> {
     move |input: &mut &'a [u8]| {
         let page_start = *input;
-        literal(&[PAGE_TYPE_LEAF_INDEX][..]).parse_next(input)?;
+        literal(PAGE_TYPE_LEAF_INDEX).parse_next(input)?;
         let header = leaf_page_header.parse_next(input)?;
 
         for _ in 0..header.no_cells {
@@ -299,7 +299,7 @@ fn leaf_table_b_tree_page_with_overflow<'a, E: ParserError<&'a [u8]>>(
 ) -> impl Parser<&'a [u8], LeafTablePage<'a>, E> {
     move |input: &mut &'a [u8]| {
         let page_start = *input;
-        literal(&[0x0du8][..]).parse_next(input)?;
+        literal(0x0du8).parse_next(input)?;
         let header = leaf_page_header.parse_next(input)?;
         let mut cells = Vec::with_capacity(header.no_cells as usize);
 
@@ -377,7 +377,7 @@ fn table_cell_payload_cached<'a, E: ParserError<&'a [u8]>>(
         if bytes_read + col_size <= local_data_size {
             let col_data = &local_data[bytes_read..bytes_read + col_size];
             let mut col_input = col_data;
-            let value = parse_single_column(serial_type, &mut col_input)?;
+            let value = column(serial_type, &mut col_input)?;
             column_values[idx] = value;
             bytes_read += col_size;
         } else {
@@ -470,7 +470,7 @@ where
     let page_type = *input
         .first()
         .ok_or_else(|| crate::error::SQLiteError::Other("Empty page".into()))?;
-    literal(&[page_type][..])
+    literal(page_type)
         .parse_next(&mut input_mut)
         .map_err(|_: ContextError| crate::error::SQLiteError::Other("Invalid page type".into()))?;
 

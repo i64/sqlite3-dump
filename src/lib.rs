@@ -1,3 +1,6 @@
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 extern crate core;
 
 use memmap2::{Mmap, MmapOptions};

@@ -1,4 +1,4 @@
-use sqlite3_dump::parquet_writer::export_table_to_parquet;
+use sqlite3_dump::parquet_writer;
 use sqlite3_dump::{HashMap, Reader, SqlSchema};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -123,7 +123,7 @@ fn export_single_table(
 
     let export_start = Instant::now();
 
-    match export_table_to_parquet(reader, table_name, output_file, batch_size) {
+    match export_table(reader, table_name, output_file, batch_size) {
         Ok(row_count) => {
             print_single_table_summary(table_name, row_count, &export_start, output_file)
         }
@@ -223,7 +223,7 @@ fn export_table(
     batch_size: usize,
 ) -> sqlite3_dump::error::Result<usize> {
     let export_start = Instant::now();
-    let result = export_table_to_parquet(reader, table_name, output_file, batch_size);
+    let result = parquet_writer::export_table(reader, table_name, output_file, batch_size);
     if let Ok(row_count) = &result {
         let duration = export_start.elapsed();
 

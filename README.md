@@ -54,7 +54,7 @@ sys	0m0.920s
 `sqlite3-dump parquet` -- 6.4 seconds
 ```
 $ time target/release/parquet basic_batched.db user  -o user.parquet
-Database opened in 58.439µs
+Database opened in 26.84µs
 
 SQLite to Parquet Exporter
 ==========================
@@ -67,19 +67,20 @@ Batch size: 10000
 Exporting table: user
 Output file: user.parquet
 
+  ✓ user: 100000000 rows (310.01 MB) - 5.85s (17079782 rows/sec)
 
 Export completed successfully!
 ==========================
 Table: user
 Rows exported: 100000000
-Time taken: 6.53s
+Time taken: 5.85s
 Output file: user.parquet
-Throughput: 15319197 rows/sec
+Throughput: 17079699 rows/sec
 File size: 310.01 MB
 
-real	0m6.577s
-user	0m11.006s
-sys	0m0.757s
+real	0m5.994s
+user	0m10.433s
+sys	0m0.474s
 ```
 ## References
 - [https://github.com/sqlite/sqlite/](https://github.com/sqlite/sqlite/tree/master)
