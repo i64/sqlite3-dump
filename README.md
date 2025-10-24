@@ -12,15 +12,19 @@ Fast SQLite3 database file parser and dumper written in Rust.
 it's not fuzzed yet so use it with your own risk on production and on untrusted enviroment
 
 ## Usage
+for better simd
+```
+export RUSTFLAGS="-C target-cpu=native"
+```
 ### CSV Export
 ```bash
-RUSTFLAGS="-C target-cpu=native" cargo run --bin csv --release -- database.db -t table_name output.csv
-RUSTFLAGS="-C target-cpu=native" cargo run --bin csv --release -- database.db -t table_name > output.csv
+cargo run --bin csv --release -- database.db -t table_name output.csv
+cargo run --bin csv --release -- database.db -t table_name > output.csv
 ```
 
 ### Parquet Export
 ```bash
-RUSTFLAGS="-C target-cpu=native" cargo run --bin parquet --release -- database.db table_name -o output.parquet
+cargo run --bin parquet --release -- database.db table_name -o output.parquet
 ```
 
 ## quick comprasion
