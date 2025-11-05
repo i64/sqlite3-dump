@@ -51,7 +51,7 @@ user	0m5.480s
 sys	0m0.920s
 ```
 
-`sqlite3-dump parquet` -- 6.4 seconds
+`sqlite3-dump parquet` -- 5.9 seconds
 ```
 $ time target/release/parquet basic_batched.db user  -o user.parquet
 Database opened in 26.84µs
