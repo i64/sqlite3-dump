@@ -28,7 +28,7 @@ ahash = { version = "0.8.12", default-features = false }
 argh = { version = "0.1.13", default-features = false, features = ["help"] }
 turso_parser = {version = "0.2.2" }
 once_cell = "1.21.3"
-jemallocator = "0.5.4"
+mimalloc = { version = "0.1.48", features = ["v3"] }
 
 [profile.release]
 codegen-units = 1
